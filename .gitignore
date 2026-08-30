@@ -14,5 +14,12 @@ __pycache__/
 venv/
 .env
 
+# Data (WVS has a non-redistribution license — keep raw/processed out of git)
+data/raw/
+data/processed/
+
+# Notebooks
+.ipynb_checkpoints/
+
 # Misc
 *.log

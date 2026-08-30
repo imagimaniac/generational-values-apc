@@ -65,11 +65,11 @@ The short-term objective is a complete, working, publicly-shared research artifa
 Check items off as you complete them. `[SEQUENTIAL]` tasks must wait on something earlier. `[PARALLEL]` tasks can run alongside others in the same phase.
 
 ### Phase 1 — Foundation (`Week 1`)
-- [ ] **Set up GitHub repo & environment** — Repo structure, virtualenv, requirements.txt, README skeleton. `[SEQUENTIAL]` (0.5 day)
+- [x] **Set up GitHub repo & environment** — Repo structure, virtualenv, requirements.txt, README skeleton. `[SEQUENTIAL]` (0.5 day) ✅ done 2026-08-31
 - [ ] **Download & inventory WVS waves 1–7** — Raw data pull, variable dictionary review. `[SEQUENTIAL]` (0.5 day)
 - [ ] **Download Pew Global Attitudes cross-check data** — Secondary dataset for validating WVS findings. `[PARALLEL — with T2]` (0.5 day)
 - [ ] **Build data cleaning pipeline** — Harmonize variable coding across all 7 waves. `[SEQUENTIAL — after T2]` (1.5 days)
-- [ ] **Construct cohort & period variables** — Birth-year bins and survey-year fields for the APC model. `[SEQUENTIAL — after T4]` (0.5 day)
+- [x] **Construct cohort & period variables** — Birth-year bins and survey-year fields for the APC model. `[SEQUENTIAL — after T4]` (0.5 day) ✅ done 2026-08-31 (derives birth year from `A_YEAR − Q262`; see docs/data_notes.md)
 - [ ] **Literature skim: Mannheim, Inglehart, APC methods** — Grounding read — can be done evenings, off the critical path. `[PARALLEL — all week]` (1 day)
 
 ### Phase 2 — Modeling (`Week 2`)

@@ -1,54 +1,136 @@
-# Publishing — GitHub Public Repo
+# Generational Values — Age-Period-Cohort (APC) Analysis
 
-This folder is the **public-facing** side of `Outreach-v2`. Its contents get pushed to GitHub as the `generational-values-apc` repository (and related public work) and are committed to **every day** to build a consistent, visible activity record.
+A code-driven, reproducible analysis of how **individualism, collectivism,
+and related value orientations** shift across generational cohorts over time,
+using World Values Survey data and a statistically defensible
+**Hierarchical Age-Period-Cohort (HAPC)** model — not a pop-sociology
+narrative.
 
-> This is the git repo. Commit and push from here. The sibling **`workspace/`** folder holds private working copies and must be kept in sync (see `workspace/README.md` — the sync rule).
+This repository is the public home of the research: the pipeline, the model,
+the dashboard, and the write-up. It is committed to **daily**, so activity
+here is visible and continuous.
 
 ---
 
-## What's here
+## Status
 
-- `README.md` — this file
-- `generational-values-project-plan.md` — the APC/generational-values research project plan
-- `master-plan-publication-outreach-roadmap.md` — the 12-month publication/outreach/portfolio roadmap
+| Phase | Focus | Status |
+|---|---|---|
+| 1 | Foundation: repo, env, data, cleaning pipeline | 🔄 In progress (pipeline skeleton working) |
+| 2 | Modeling: indices + HAPC model | ⏳ Not started |
+| 3 | Analysis & Visualization: dashboard | ⏳ Not started (skeleton) |
+| 4 | Writing & Packaging | ⏳ Not started |
+| 5 | Distribution | ⏳ Not started |
 
-*(HTML tracking copies are intentionally kept out of this public folder.)*
+> Full task breakdown: [generational-values-project-plan.md](./generational-values-project-plan.md)
+> Longer-term roadmap: [master-plan-publication-outreach-roadmap.md](./master-plan-publication-outreach-roadmap.md)
+
+---
+
+## What this project is
+
+A claim like "Gen Z is more liberal" conflates three distinct effects:
+
+- **Age effect** — people become less idealistic as they age.
+- **Period effect** — a historical event shifts everyone at once.
+- **Cohort effect** — a permanent mark on those who came of age at a
+  specific time (Mannheim, Inglehart).
+
+This project separates those forces with a cross-classified random-effects
+HAPC model on contrast countries **(India, US, Sweden, Japan, Brazil)**.
+
+---
+
+## Repository layout
+
+```
+.
+├── data/
+│   ├── raw/                 # WVS raw data (git-ignored — WVS license)
+│   └── processed/           # cleaned/intermediate outputs (git-ignored)
+├── src/
+│   ├── clean.py             # data cleaning pipeline (negatives -> NaN)
+│   ├── preprocess.py        # age/period/cohort variable construction
+│   ├── apc_model.py         # HAPC model (Phase 2)
+│   └── dashboard.py         # Streamlit dashboard (Phase 3)
+├── notebooks/               # exploration notebooks
+├── docs/
+│   ├── data_notes.md        # data provenance + WVS citation + limitations
+├── reports/figures/         # chart outputs
+├── tests/                   # pytest suite
+├── requirements.txt         # Python dependencies
+└── README.md
+```
+
+---
+
+## Setup
+
+Requires Python 3.10+.
+
+```bash
+# 1. Create the virtual environment
+python -m venv .venv
+source .venv/bin/activate        # (Windows: .venv\Scripts\activate)
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Get the data (WVS has a non-redistribution license, so it's git-ignored)
+mkdir -p data/raw data/processed
+curl -L "https://osf.io/download/67pje/" -o data/raw/WVS_subset.csv
+
+# 4. Sanity check the pipeline
+pytest -q
+python src/preprocess.py
+```
+
+---
+
+## Usage
+
+```bash
+# Clean the raw data (recode non-response to missing)
+python src/clean.py
+
+# Build age / period / cohort variables
+python src/preprocess.py
+
+# Launch the dashboard (Phase 3)
+streamlit run src/dashboard.py
+```
+
+---
+
+## Data & citation
+
+- Data source and column-coding notes: [docs/data_notes.md](./docs/data_notes.md)
+- **Citation:** Haerpfer, C., Inglehart, R., Moreno, A., Welzel, C.,
+  Kizilova, K., Diez-Medrano, J., Lagos, M., Norris, P., Ponarin, E. &
+  Puranen, B. (2022). *World Values Survey: Round Seven — Country-Pooled
+  Datafile, Version 4.0.0.* JD Systems Institute & WVSA Secretariat.
+  DOI: <https://doi.org/10.14281/18241.18>
+
+> ⚠️ **Limitation:** the current subset is **Wave 7 only** (2017–2023), which
+> limits period variation. See [docs/data_notes.md](./docs/data_notes.md) and
+> the plan for the path to a full multi-wave design.
 
 ---
 
 ## Daily publishing convention
 
-The whole point of this repo is **visible, consistent daily activity**. The habit matters more than the size of any single commit.
+This repo exists to build a **visible, consistent daily activity record**.
+Commit something small and meaningful every day — a chart, an index update,
+a note — with a dated message:
 
-- **Commit something small and meaningful every day.** Doesn't have to be a feature — a chart, an index update, a curated note, a README refresh all count.
-- **Use a clear, dated commit message:**
-  ```
-  Publish: 2026-08-31 — updated generational-values plan (Phase 1 tasks)
-  ```
-- **Work here, publish here.** Edits made in `workspace/` should be mirrored here via `./sync.sh` before committing.
-
-### Typical day
-1. Edit work in `publishing/` (or `workspace/` then sync).
-2. `./sync.sh` — make sure both folders match.
-3. `git add -A && git commit -m "Publish: <date> — <what changed>"`
-4. `git push`
+```
+Publish: 2026-08-31 — scaffold repo + working cleaning pipeline
+```
 
 ---
 
-## Repo organization for visibility (overview)
+## License / use note
 
-Recommended flagship repos (public + own, not forks):
-
-- `generational-values-apc` — this research project (highest-visibility differentiator)
-- a **credit-risk portfolio** repo mirroring Track C topics (IFRS9/CECL, BNPL risk, thin-file scoring)
-- polished versions of existing owned repos (`stock-prediction-project`, `Projects_shelf`)
-
-Keep forks out of the pinned lineup — only owned, maintained repos signal active building.
-
----
-
-## Links
-
-- Master roadmap: [master-plan-publication-outreach-roadmap.md](./master-plan-publication-outreach-roadmap.md)
-- Project plan: [generational-values-project-plan.md](./generational-values-project-plan.md)
-- Workspace (private + sync rule): [../workspace/README.md](../workspace/README.md)
+The analysis code is this repository's own work. The underlying WVS data is
+subject to the World Values Survey non-redistribution data-use license; raw
+data is intentionally not committed here.
