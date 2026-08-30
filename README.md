@@ -45,6 +45,7 @@ HAPC model on contrast countries **(India, US, Sweden, Japan, Brazil)**.
 
 ```
 .
+├── CONTEXT.md                  # session handoff / current-state snapshot
 ├── data/
 │   ├── raw/                 # WVS raw data (git-ignored — WVS license)
 │   └── processed/           # cleaned/intermediate outputs (git-ignored)
