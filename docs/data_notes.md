@@ -44,10 +44,15 @@ variation** across survey rounds — only age and (derived) cohort vary.
 
 ### Path to a full APC design
 Obtain the **official multi-wave WVS file** via a free registration at
-`worldvaluessurvey.org` (the source even publishes a longitudinal
-1981–2022 integrated file). That allows a proper HAPC model with genuine
-period variation. This repo is structured so you can swap in that file at
-`data/raw/` and re-run the same pipeline.
+`worldvaluessurvey.org` (a longitudinal 1981–2022 integrated file combining
+all 7 waves with a common dictionary). This repo is structured so you can
+swap in that file at `data/raw/` and re-run the same pipeline.
+
+- **Step-by-step download guide:** see [`docs/wvs_download.md`](wvs_download.md)
+- **Pipeline status:** `src/preprocess.py` is now **multi-wave ready**. It
+  resolves the true birth year from `x003r` when present and valid, and falls
+  back to `period − age` otherwise, so it runs identically on either the
+  Wave-7 subset or the full 1981–2022 file. Default cohort width is **5-year**.
 
 ## Column coding notes for this subset
 

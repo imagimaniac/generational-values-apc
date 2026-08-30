@@ -3,14 +3,17 @@ preprocess.py — Construct cohort and period variables for the APC model.
 
 Given a cleaned WVS frame, builds:
     period  : survey year (A_YEAR)
-    age     : respondent age at interview (Q262 in this curated subset)
-    birth   : derived birth year (period - age)
+    age     : respondent age at interview
+    birth   : birth year (taken directly, or derived as period - age)
     cohort  : birth-year cohort bins (configurable width)
 
-Data note: in the curated OSF/gabors WVS_subset (Wave 7), the raw X003R
-column is an age-bracket recode (1-6), not a birth year, and X002_02B
-(birth year) is unpopulated. We therefore take age from Q262 and derive
-the birth year as period - age.
+Birth-year resolution (multi-wave aware):
+    - The official WVS 1981-2022 time-series stores year of birth in `x003r`;
+      when present and valid (roughly 1900 <= x003r <= period, and not a small
+      age-bracket code), use it directly.
+    - Otherwise (e.g. some curated subsets where `x003r` is an age-bracket and
+      `x002_02b` birth year is empty) fall back to deriving birth as
+      period - age via `q262`.
 
 APC identification note: age = period - cohort is an exact linear dependency,
 central to the age-period-cohort problem. Period and cohort are treated as
@@ -19,14 +22,46 @@ cross-classified random effects in the HAPC model.
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 # WVS columns this pipeline depends on (lowercased by clean.py)
 PERIOD_COL = "a_year"
-AGE_COL = "q262"  # age at interview in this curated subset
+AGE_COL = "q262"  # age at interview
+BIRTH_YEAR_COLS = ["x003r", "x002_02b"]  # candidate birth-year columns (in priority order)
 
-# Default cohort bin width in years (10-year generations is a common choice)
-DEFAULT_COHORT_WIDTH = 10
+# Default cohort bin width in years (5-year bins are standard for APC)
+DEFAULT_COHORT_WIDTH = 5
+
+
+def _resolve_birth_year(df: pd.DataFrame) -> pd.Series:
+    """
+    Return a birth-year series, using the true birth year if available,
+    otherwise deriving it as period - age.
+
+    The WVS full time-series stores year of birth in x003r. Some curated
+    subsets instead store an age-bracket (1-6) there, so we validate before
+    trusting it. A plausible birth year must be in [1900, period].
+    """
+    period = df[PERIOD_COL].astype("float")
+
+    birth = pd.Series(np.nan, index=df.index, dtype="float64")
+    for col in BIRTH_YEAR_COLS:
+        if col in df.columns:
+            candidate = pd.to_numeric(df[col], errors="coerce").astype("float")
+            # Reject values that are clearly age-bracket codes (1-6) or
+            # out of range for a birth year.
+            plausible = candidate.between(1900, period)
+            if plausible.any():
+                birth = birth.mask(plausible, candidate[plausible])
+
+    # Where no valid birth year was found, derive from age and period.
+    has_age = df[AGE_COL].notna() & period.notna()
+    if "birth" not in df.columns:
+        derived = period - df[AGE_COL].astype("float")
+        birth = birth.mask(birth.isna() & has_age, derived)
+
+    return birth
 
 
 def add_apc_variables(
@@ -34,17 +69,15 @@ def add_apc_variables(
     cohort_width: int = DEFAULT_COHORT_WIDTH,
 ) -> pd.DataFrame:
     """
-    Add period, age, derived birth-year, and cohort columns.
+    Add period, age, birth-year, and cohort columns.
 
-    Rows lacking a valid age or period are dropped (required for cohort).
+    Rows lacking a valid age and period are dropped (required for cohort).
     """
     out = df.copy()
 
-    out["period"] = out[PERIOD_COL]
-    out["age"] = out[AGE_COL].astype("float")
-    out["birth"] = out["period"] - out["age"]
-
-    # Cohort labeled by the start of the birth-year bin.
+    out["period"] = out[PERIOD_COL].astype("float")
+    out["age"] = pd.to_numeric(out[AGE_COL], errors="coerce").astype("float")
+    out["birth"] = _resolve_birth_year(out)
     out["cohort"] = (out["birth"] // cohort_width) * cohort_width
 
     before = len(out)

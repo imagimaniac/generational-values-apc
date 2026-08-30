@@ -56,6 +56,7 @@ HAPC model on contrast countries **(India, US, Sweden, Japan, Brazil)**.
 ├── notebooks/               # exploration notebooks
 ├── docs/
 │   ├── data_notes.md        # data provenance + WVS citation + limitations
+│   └── wvs_download.md      # how to get the official multi-wave WVS file
 ├── reports/figures/         # chart outputs
 ├── tests/                   # pytest suite
 ├── requirements.txt         # Python dependencies
@@ -112,8 +113,10 @@ streamlit run src/dashboard.py
   DOI: <https://doi.org/10.14281/18241.18>
 
 > ⚠️ **Limitation:** the current subset is **Wave 7 only** (2017–2023), which
-> limits period variation. See [docs/data_notes.md](./docs/data_notes.md) and
-> the plan for the path to a full multi-wave design.
+> limits period variation. The pipeline is **multi-wave ready**; to enable a
+> full HAPC design, obtain the official 1981–2022 WVS file via the step-by-step
+> guide in [docs/wvs_download.md](./docs/wvs_download.md) and drop it into
+> `data/raw/`. See also [docs/data_notes.md](./docs/data_notes.md).
 
 ---
 
