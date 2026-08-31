@@ -1,7 +1,7 @@
 # Generational Values & Age–Period–Cohort Research — Project Plan
 
-> **Status:** Migration to multi-wave data — Phase 1 in progress &nbsp;|&nbsp; **Type:** Independent research project &nbsp;|&nbsp; **Duration:** 5 weeks (~20 working days)
-> **Progress:** 3 / 27 tasks checked — track progress by ticking `- [ ]` items below.
+> **Status:** Multi-wave migration complete — HAPC first run done &nbsp;|&nbsp; **Type:** Independent research project &nbsp;|&nbsp; **Duration:** 5 weeks (~20 working days)
+> **Progress:** 7 / 27 tasks checked — track progress by ticking `- [ ]` items below.
 > **Handoff / session context:** see [`CONTEXT.md`](./CONTEXT.md) for a current-state snapshot.
 
 ---
@@ -67,23 +67,23 @@ Check items off as you complete them. `[SEQUENTIAL]` tasks must wait on somethin
 
 ### Phase 1 — Foundation (`Week 1`)
 - [x] **Set up GitHub repo & environment** — Repo structure, virtualenv, requirements.txt, README skeleton. `[SEQUENTIAL]` (0.5 day) ✅ done 2026-08-31
-- [ ] **Download & inventory WVS waves 1–7** — Raw data pull, variable dictionary review. `[SEQUENTIAL]` (0.5 day) ⏳ **MANUAL STEP (user):** current Wave-7 subset downloaded; the official 1981–2022 file is the one manual step — register + download per `docs/wvs_download.md` (~3 min), then drop CSV in `data/raw/`. Cannot be automated (license + personal download link).
+- [ ] **Download & inventory WVS waves 1–7** — Raw data pull, variable dictionary review. `[SEQUENTIAL]` (0.5 day) ✅ **DONE 2026-08-31** — official 1981–2022 time-series downloaded (443K rows, 7 waves, 108 countries) at `data/raw/`
 - [ ] **Download Pew Global Attitudes cross-check data** — Secondary dataset for validating WVS findings. `[PARALLEL — with T2]` (0.5 day)
-- [ ] **Build data cleaning pipeline** — Harmonize variable coding across all 7 waves. `[SEQUENTIAL — after T2]` (1.5 days) 🔶 backbone done (negatives→NaN, tested); cross-wave harmonization pending official file
-- [x] **Construct cohort & period variables** — Birth-year bins and survey-year fields for the APC model. `[SEQUENTIAL — after T4]` (0.5 day) ✅ done 2026-08-31 (derives birth year from `A_YEAR − Q262`; see docs/data_notes.md)
+- [x] **Build data cleaning pipeline** — Harmonize variable coding across all 7 waves. `[SEQUENTIAL — after T2]` (1.5 days) ✅ done 2026-08-31 (schema-aware, chunked, 7 waves)
+- [x] **Construct cohort & period variables** — Birth-year bins and survey-year fields for the APC model. `[SEQUENTIAL — after T4]` (0.5 day) ✅ done 2026-08-31 (birth from X002, age from X003, 5-yr bins)
 - [ ] **Literature skim: Mannheim, Inglehart, APC methods** — Grounding read — can be done evenings, off the critical path. `[PARALLEL — all week]` (1 day)
 
 ### Phase 1b — Migration to official multi-wave data (current focus)
 - [x] **Make pipeline multi-wave ready** — Birth-year resolution (true `x003r` vs fallback `period − age`), 5-year cohort bins, `docs/wvs_download.md`, tests. `[SEQUENTIAL]` ✅ done 2026-08-31 (7/7 tests pass on Wave-7 subset)
-- [ ] **Manual step: obtain official 1981–2022 WVS file** — The single manual task; see `docs/wvs_download.md`. Then tell the assistant the filename.
-- [ ] **Swap in multi-wave file & re-verify** — Inspect real file (waves 1–7, `X003R`=birth year), update data notes/citation, re-run pipeline on 7 waves.
-- [ ] **Build full HAPC model with genuine period variation** — Cross-classified random effects (Yang–Land default), sensitivity checks (cohort widths 5/10/20).
-- [ ] **Publish migration** — Update README (remove Wave-7 caveat), sync, commit, push.
+- [x] **Manual step: obtain official 1981–2022 WVS file** — The single manual task; see `docs/wvs_download.md`. Then tell the assistant the filename. ✅ done 2026-08-31 (file at `data/raw/WVS_Time_Series_1981-2022_csv_v5_0.csv`)
+- [x] **Swap in multi-wave file & re-verify** — Inspect real file (waves 1–7, `X003R`=birth year), update data notes/citation, re-run pipeline on 7 waves. ✅ done 2026-08-31 (438,749 APC rows; X003R is an age-bracket; birth is X002)
+- [x] **Build full HAPC model with genuine period variation** — Cross-classified random effects (Yang–Land default), sensitivity checks (cohort widths 5/10/20). ✅ done 2026-08-31 (cell model; trust + selfexpr; 5/10/20 widths)
+- [x] **Publish migration** — Update README (remove Wave-7 caveat), sync, commit, push. ✅ done 2026-08-31 (reports/RESULTS.md + charts)
 
 ### Phase 2 — Modeling (`Week 2`)
 - [ ] **Build individualism–collectivism composite index** — Derive from relevant WVS item battery. `[SEQUENTIAL]` (1 day)
 - [ ] **Build traditional–secular / survival–expression indices** — Independent computation, can run alongside the I–C index. `[PARALLEL]` (1 day)
-- [ ] **Implement Hierarchical APC (HAPC) model** — Cross-classified random-effects model separating age, period, cohort. `[SEQUENTIAL — after indices + multi-wave data]` (2 days) 🔶 skeleton exists in `src/apc_model.py`; requires official 1981–2022 file for real period effects
+- [ ] **Implement Hierarchical APC (HAPC) model** — Cross-classified random-effects model separating age, period, cohort. `[SEQUENTIAL — after indices + multi-wave data]` (2 days) 🔶 **first full run done 2026-08-31** (`src/apc_model.py` cell model; trust + selfexpr; 5/10/20 widths); follow-up: GLMM + weights
 - [ ] **Run sensitivity checks** — Alternate cohort bin widths, alternate model specs. `[SEQUENTIAL — after model]` (1 day)
 
 ### Phase 3 — Analysis & Visualization (`Week 3`)
@@ -163,6 +163,20 @@ By this point there should be enough real signal (traction, replies, possible co
 ## 10 — Session Log (context for future sessions)
 
 Latest first. Full handoff snapshot maintained in [`CONTEXT.md`](./CONTEXT.md).
+
+**2026-08-31 (Session 2)**
+- Downloaded official WVS 1981–2022 time-series (443,488 rows, 7 waves, 108
+  countries, 1981–2023) at `data/raw/`.
+- Migrated pipeline to official schema (`S002VS`/`S020`/`X003`/`X002`/`S003`);
+  `clean.py` reads only needed columns in chunks (loads 1.3 GB in ~8 s).
+- Confirmed `X003R` is an age-bracket recode, NOT birth year → birth from `X002`.
+- Built outcomes (`trust` from A165, `selfexpr` from SurvSAgg); APC frame = 438,749 rows.
+- **Fitted full HAPC** (cross-classified period × cohort cell model; age fixed
+  polynomial) for trust + selfexpr across cohort widths 5/10/20.
+- **Headline:** generalized trust declines monotonically across birth cohorts
+  (younger = less trust), robust to cohort width; age effect small.
+- Results + charts in `reports/` ; write-up `reports/RESULTS.md`.
+- Next: GLMM + weights, contrast-country focus, dashboard.
 
 **2026-08-31 (Session 1)**
 - Repo scaffolded + pushed (`imagimaniac/generational-values-apc`); clean/preprocess pipeline working (96,709 APC rows) on Wave-7 subset; docs + citation added.

@@ -16,12 +16,13 @@ here is visible and continuous.
 
 | Phase | Focus | Status |
 |---|---|---|
-| 1 | Foundation: repo, env, data, cleaning pipeline | 🔄 In progress (pipeline skeleton working) |
-| 2 | Modeling: indices + HAPC model | ⏳ Not started |
+| 1 | Foundation: repo, env, data, cleaning pipeline | ✅ Complete (official 1981–2022 data) |
+| 2 | Modeling: indices + HAPC model | 🔄 First full HAPC run done (trust + selfexpr) |
 | 3 | Analysis & Visualization: dashboard | ⏳ Not started (skeleton) |
 | 4 | Writing & Packaging | ⏳ Not started |
 | 5 | Distribution | ⏳ Not started |
 
+> Latest results: [`reports/RESULTS.md`](./reports/RESULTS.md)
 > Full task breakdown: [generational-values-project-plan.md](./generational-values-project-plan.md)
 > Longer-term roadmap: [master-plan-publication-outreach-roadmap.md](./master-plan-publication-outreach-roadmap.md)
 
@@ -50,15 +51,16 @@ HAPC model on contrast countries **(India, US, Sweden, Japan, Brazil)**.
 │   ├── raw/                 # WVS raw data (git-ignored — WVS license)
 │   └── processed/           # cleaned/intermediate outputs (git-ignored)
 ├── src/
-│   ├── clean.py             # data cleaning pipeline (negatives -> NaN)
-│   ├── preprocess.py        # age/period/cohort variable construction
-│   ├── apc_model.py         # HAPC model (Phase 2)
+│   ├── clean.py             # data cleaning pipeline (schema-aware, chunked)
+│   ├── preprocess.py        # APC variables + outcomes construction
+│   ├── apc_model.py         # HAPC cross-classified model
+│   ├── analysis.py          # end-to-end run -> results + charts
 │   └── dashboard.py         # Streamlit dashboard (Phase 3)
 ├── notebooks/               # exploration notebooks
 ├── docs/
-│   ├── data_notes.md        # data provenance + WVS citation + limitations
+│   ├── data_notes.md        # data provenance + WVS citation + column map
 │   └── wvs_download.md      # how to get the official multi-wave WVS file
-├── reports/figures/         # chart outputs
+├── reports/                 # results (CSV) + charts; RESULTS.md summary
 ├── tests/                   # pytest suite
 ├── requirements.txt         # Python dependencies
 └── README.md
@@ -79,12 +81,16 @@ source .venv/bin/activate        # (Windows: .venv\Scripts\activate)
 pip install -r requirements.txt
 
 # 3. Get the data (WVS has a non-redistribution license, so it's git-ignored)
+#    Official 1981-2022 time-series (one free registration; see docs/wvs_download.md)
 mkdir -p data/raw data/processed
-curl -L "https://osf.io/download/67pje/" -o data/raw/WVS_subset.csv
+# ...place WVS_Time_Series_1981-2022_csv_v5_0.csv in data/raw/
 
 # 4. Sanity check the pipeline
 pytest -q
 python src/preprocess.py
+
+# 5. Run the full HAPC analysis (writes results + charts to reports/)
+python src/analysis.py
 ```
 
 ---
@@ -113,11 +119,10 @@ streamlit run src/dashboard.py
   Datafile, Version 4.0.0.* JD Systems Institute & WVSA Secretariat.
   DOI: <https://doi.org/10.14281/18241.18>
 
-> ⚠️ **Limitation:** the current subset is **Wave 7 only** (2017–2023), which
-> limits period variation. The pipeline is **multi-wave ready**; to enable a
-> full HAPC design, obtain the official 1981–2022 WVS file via the step-by-step
-> guide in [docs/wvs_download.md](./docs/wvs_download.md) and drop it into
-> `data/raw/`. See also [docs/data_notes.md](./docs/data_notes.md).
+> ℹ️ **Data note:** the project uses the official **WVS 1981–2022 time-series**
+> (7 waves, 108 countries), which provides genuine period variation for the
+> HAPC model. Obtain the file via [docs/wvs_download.md](./docs/wvs_download.md);
+> it is git-ignored per the WVS license.
 
 ---
 

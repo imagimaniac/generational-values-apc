@@ -1,15 +1,20 @@
 """
 apc_model.py — Hierarchical Age-Period-Cohort (HAPC) model.
 
-Implements the cross-classified random-effects HAPC model (Bell & Jones
-style) using statsmodels MixedLM. Separates age, period, and cohort effects
-by treating period and cohort as cross-classified random intercepts while
-age enters as a fixed effect (linear + polynomial).
+Implements the HAPC model (Yang & Land specification) fitted as a
+cross-classified random-effects linear mixed model via statsmodels MixedLM.
+Age enters as a fixed polynomial effect; period and cohort are treated as
+random intercepts over the cross-classified period x cohort cells.
 
-NOTE (Phase 2): This is a working skeleton. The full model needs:
-  - A composite outcome index (individualism-collectivism, etc.)
-  - Optional random slopes, format/weights considerations
-  - Sensitivity checks (alternate cohort widths, specs)
+Because we run on the official multi-wave WVS 1981-2022 file (7 waves, real
+period variation), the age/period/cohort split is identifiable rather than a
+single-wave approximation.
+
+Outcomes
+--------
+  - 'trust'    : binary generalized trust (A165), 1 = trusts. Fit with a
+                 linear mixed model in this first pass (a GLMM is a follow-up).
+  - 'selfexpr' : standardized self-expression / survival index (SurvSAgg).
 """
 
 from __future__ import annotations
@@ -21,52 +26,85 @@ import statsmodels.formula.api as smf
 DEFAULT_FORMULA = "outcome ~ age + I(age**2)"
 
 
+def _select_outcome(df: pd.DataFrame, outcome: str) -> pd.DataFrame:
+    d = df.copy()
+    if outcome == "trust":
+        d["outcome"] = d["trust"]
+    elif outcome == "selfexpr":
+        d["outcome"] = d["selfexpr"]
+    else:
+        raise ValueError(f"Unknown outcome: {outcome}")
+    return d.dropna(subset=["outcome", "age", "period", "cohort"])
+
+
 def fit_hapc(
     df: pd.DataFrame,
+    outcome: str = "trust",
+    cohort_width: int = 5,
     formula: str = DEFAULT_FORMULA,
-    groups: str = "c(period) + c(cohort)",
 ):
     """
-    Fit a cross-classified random-effects HAPC model.
+    Fit a cross-classified cells HAPC model.
 
-    Parameters
-    ----------
-    df : DataFrame containing 'outcome', 'age', 'period', 'cohort'.
-    formula : statsmodels-style fixed-effects formula for age.
-    groups : random-effects grouping, both period and cohort (cross-classified).
+    Age is a fixed polynomial effect; period and cohort are crossed via a
+    random intercept on the period x cohort cell.
 
     Returns
     -------
-    statsmodels MixedLM results object.
+    (result, data) : statsmodels MixedLM result + prepared model frame
+        (with 'cohort', 'period', 'cell', and 'outcome' columns).
     """
-    model = smf.mixedlm(formula, df, groups=groups)
+    d = df.copy()
+    d["cohort"] = (d["birth"] // cohort_width) * cohort_width
+    d["period"] = d["period"].astype("float")
+    d["cell"] = (
+        d["period"].round(0).astype(int).astype(str)
+        + ":"
+        + cohort_width.__str__()
+        + "-"
+        + d["cohort"].round(0).astype(int).astype(str)
+    )
+    d = _select_outcome(d, outcome)
+
+    model = smf.mixedlm(formula, d, groups="cell")
     result = model.fit(reml=True)
-    return result
+    return result, d
 
 
-def sensitivity_check(df: pd.DataFrame, cohort_widths=(5, 10, 20)) -> dict:
-    """Rerun the HAPC model across cohort bin widths (Phase 2 sensitivity)."""
-    from preprocess import add_apc_variables
+def _cell_effects(result) -> pd.DataFrame:
+    """DataFrame of period x cohort cell random-effects BLUPs."""
+    re = result.random_effects
+    rows = []
+    for cell, v in re.items():
+        try:
+            period_s, cohort_s = cell.split(":")
+            cohort_s = cohort_s.split("-", 1)[1]
+            rows.append(
+                {
+                    "cell": cell,
+                    "period": float(period_s),
+                    "cohort": float(cohort_s),
+                    "effect": float(v["cell"]),
+                }
+            )
+        except Exception:
+            continue
+    return pd.DataFrame(rows)
 
-    results = {}
-    for w in cohort_widths:
-        d = add_apc_variables(df, cohort_width=w)
-        d["cohort"] = d["cohort"].astype("category")
-        d["period"] = d["period"].astype("category")
-        results[w] = fit_hapc(d)
-    return results
 
+def marginal_effects(result) -> "tuple[pd.DataFrame, pd.DataFrame]":
+    """
+    Marginal cohort and period effects derived from the crossed cell BLUPs.
 
-if __name__ == "__main__":
-    from pathlib import Path
-
-    from clean import clean
-    from preprocess import add_apc_variables
-
-    default = Path(__file__).resolve().parents[1] / "data" / "raw" / "WVS_subset.csv"
-    df = clean(str(default))
-    apc = add_apc_variables(df)
-    # Need an outcome column before the model can run (Phase 2 work).
-    print("apc_model.py is a skeleton — requires a built outcome index first.")
-    print(f"Prepared frame: {len(apc)} rows, {len(apc.columns)} cols, "
-          f"{apc['cohort'].nunique()} cohorts, {apc['period'].nunique()} periods")
+    The cell random intercept bundles period + cohort + cell variance. The
+    marginal cohort effect is the mean BLUP within each birth cohort and the
+    marginal period effect is the mean BLUP within each survey year.
+    """
+    eff = _cell_effects(result)
+    if eff.empty:
+        return pd.DataFrame(), pd.DataFrame()
+    cohort = eff.groupby("cohort")["effect"].mean().reset_index()
+    cohort = cohort.sort_values("cohort")
+    period = eff.groupby("period")["effect"].mean().reset_index()
+    period = period.sort_values("period")
+    return cohort, period

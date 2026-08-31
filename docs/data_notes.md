@@ -1,67 +1,71 @@
-# Data Notes — WVS Subset
+# Data Notes — WVS (official multi-wave time-series)
 
 ## Current dataset in use
 
-- **File:** `data/raw/WVS_subset.csv`
-- **Rows:** 97,220 &nbsp;|&nbsp; **Columns:** 168 &nbsp;|&nbsp; **Countries:** 66
-- **Source:** WVS subset curated for the Gabor–Gabor "Doing Data Analysis" materials, hosted on the Open Science Framework.
-- **Download URL:** `https://osf.io/download/67pje/`
-- **File node (API):** `https://api.osf.io/v2/files/67pje/`
-- **SHA-256:** `33be0a38f549e286bccf3d110cce7a53e9c7111096707dc2af569dbb5611301f`
+- **File:** `data/raw/WVS_Time_Series_1981-2022_csv_v5_0.csv`
+- **Size:** 1.3 GB &nbsp;|&nbsp; **Rows:** 443,488 &nbsp;|&nbsp; **Columns:** 1,046
+- **Waves:** 1–7 &nbsp;|&nbsp; **Survey years:** 1981–2023 &nbsp;|&nbsp; **Countries/territories:** 108
+- **Source:** World Values Survey **Time-Series 1981–2022 (v5.0)**, CSV format,
+  downloaded from `worldvaluessurvey.org` after a free registration
+  (the one manual step, documented in [`docs/wvs_download.md`](wvs_download.md)).
 - **Retrieved:** 2026-08-31
 
 The raw and processed data are **git-ignored** because WVS carries a
-non-redistribution data-use license. To rebuild the pipeline on a fresh
-clone, re-download from the OSF link above into `data/raw/`.
+non-redistribution data-use license. To rebuild the pipeline on a fresh clone,
+re-download the file at `data/raw/` (see `docs/wvs_download.md`).
+
+> **Legacy subset:** the earlier curated `WVS_subset.csv` (OSF, Wave-7 only,
+> 97,220 rows) is superseded but still supported by the pipeline via its
+> `schema="subset"` path. The official time-series is now the primary input.
 
 ## Required citation (WVS)
-
-When publishing any analysis based on WVS data, credit the source:
 
 > Haerpfer, C., Inglehart, R., Moreno, A., Welzel, C., Kizilova, K.,
 > Diez-Medrano, J., Lagos, M., Norris, P., Ponarin, E. & Puranen, B. (2022).
 > *World Values Survey: Round Seven — Country-Pooled Datafile, Version 4.0.0.*
 > Madrid & Vienna: JD Systems Institute & WVSA Secretariat.
 > DOI: https://doi.org/10.14281/18241.18
+>
+> (For the time-series: *World Values Survey: All Rounds — Country-Pooled
+> Datafile*, JD Systems Institute & WVSA Secretariat.)
 
-## ⚠️ Important limitation: Wave 7 only
+## ✅ Migrated to multi-wave — limitation resolved
 
-Although some third-party listings describe this file as spanning
-"waves 1–7," inspection of the actual dataset shows **only one wave**:
+The earlier Wave-7-only subset could not separate age / period / cohort
+effects (no period variation). The official **1981–2022 time-series** now
+provides genuine cross-wave period variation, so a full **HAPC** analysis is
+runnable. See [`reports/RESULTS.md`](../reports/RESULTS.md).
 
-- `A_WAVE` contains a single value: **7** (surveys 2017–2023)
-- `A_YEAR` range: **2017–2023**
+## Column mapping (official time-series vs the subset)
 
-### What this means for the APC design
-A proper **age–period–cohort** decomposition needs variation across all
-three clocks. With a single survey wave there is effectively **no period
-variation** across survey rounds — only age and (derived) cohort vary.
+| Concept | Subset (legacy) | **Official time-series** |
+|---|---|---|
+| Wave | `a_wave` | `S002VS` |
+| Survey year (period) | `a_year` | `S020` |
+| Country code | `b_country_alpha` | `S003` (numeric) + `COUNTRY_ALPHA` |
+| Age | `q262` | **`X003`** |
+| Birth year | derived (`a_year − q262`) | **`X002`** (true birth year) |
+| Sex | — | `X001` |
+| Weight | — | `S017` |
+| Generalized trust | `a165` (recoded) | `A165` (1 = can be trusted) |
+| Self-expression index | `survsagg` | `SurvSAgg` |
 
-- **What we CAN do:** estimate **age** and **cohort** components within the
-  wave, and compare cohorts across countries.
-- **What we CANNOT rigorously do with this file alone:** fully separate
-  period effects from age/cohort effects using cross-wave variation.
+## Column coding notes
 
-### Path to a full APC design
-Obtain the **official multi-wave WVS file** via a free registration at
-`worldvaluessurvey.org` (a longitudinal 1981–2022 integrated file combining
-all 7 waves with a common dictionary). This repo is structured so you can
-swap in that file at `data/raw/` and re-run the same pipeline.
+- **Missing / non-response:** WVS codes negatives (`-1` Don't know, `-2` No
+  answer, `-3` Not applicable, `-4` Not asked, `-5` Missing). `src/clean.py`
+  recodes these to `NaN`.
+- **`X003R` / `X003R2` are age-bracket recodes (1–6), NOT birth years** in both
+  the official file and the subset. The true birth year is **`X002`** (official
+  file). `src/preprocess.py` reads `X002` and only falls back to
+  `period − age` where a valid birth year is absent.
+- **Birth year** range: 1890–2007; **age** range: 13–103.
+- **APC rows** after cleaning/preprocessing: 438,749.
 
-- **Step-by-step download guide:** see [`docs/wvs_download.md`](wvs_download.md)
-- **Pipeline status:** `src/preprocess.py` is now **multi-wave ready**. It
-  resolves the true birth year from `x003r` when present and valid, and falls
-  back to `period − age` otherwise, so it runs identically on either the
-  Wave-7 subset or the full 1981–2022 file. Default cohort width is **5-year**.
+## Pipeline
 
-## Column coding notes for this subset
-
-- **`Q262`** — respondent **age** (16–103). This is the variable the
-  pipeline uses for age.
-- **`X003R`** — in this curated file this is an **age-bracket recode (1–6)**,
-  **not** the birth year. (In the full WVS, `X003R` is year of birth; do not
-  rely on that here.)
-- **`X002_02B`** — birth year; **unpopulated** in this subset.
-- **Negative codes** (`-1` to `-5`) are non-response / missing and are recoded
-  to `NaN` by `src/clean.py`.
-- **Birth year** is derived as `A_YEAR − Q262` in `src/preprocess.py`.
+- `src/clean.py` — reads only the needed columns in chunks (fast on 1.3 GB),
+  recodes negatives → NaN, lowercases names. Schema-aware (`subset`/`official`).
+- `src/preprocess.py` — builds `period`, `age`, `birth`, `cohort` (5-yr bins by
+  default), `wave`, `country`, `weight`, plus `trust`/`selfexpr` outcomes.
+- `src/analysis.py` — end-to-end run writing results + charts to `reports/`.

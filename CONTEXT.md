@@ -18,43 +18,40 @@ Two folders exist everywhere:
 - **`Outreach-v2/sync.sh`** — enforces the **SYNC RULE**: *every edit to a
   common file must be reflected in BOTH folders.* `COMMON_FILES` list at top.
 
-## 2. Current status (as of end of Session 1 — 2026-08-31)
+## 2. Current status (as of Session 2 — 2026-08-31)
 
-**Phase 1 is ~done. We are mid-migration to multi-wave data.**
+**Migration to multi-wave data COMPLETE. First HAPC analysis done + pushed.**
 
 | What | State |
 |---|---|
 | Repo scaffold + pushed to GitHub | ✅ |
-| Clean pipeline (`src/clean.py`, negatives→NaN) | ✅ works, tested |
-| Preprocess (`src/preprocess.py`, age/period/cohort) | ✅ multi-wave ready |
+| Official WVS 1981–2022 file loaded (443K rows, 7 waves, 108 countries) | ✅ done |
+| Clean pipeline (`src/clean.py`, schema-aware, chunked) | ✅ works, tested |
+| Preprocess (`src/preprocess.py`, multi-wave APC vars + outcomes) | ✅ |
+| Full HAPC model fitted (trust + self-expression, 5/10/20-yr cohorts) | ✅ |
+| Results + charts in `reports/` + `reports/RESULTS.md` | ✅ |
 | Tests (7) | ✅ passing |
-| `docs/data_notes.md`, `docs/wvs_download.md`, README | ✅ |
-| **Official multi-wave WVS file (1981–2022)** | ⏳ **AWAITING USER (manual download)** |
-| Full HAPC model (period effects) | ⛔ blocked on the file above |
+| **Headline finding** | trust declines across cohorts (younger = less trust), robust to cohort width |
 
-## 3. The ONE manual task left (user action, ~3 min)
+## 3. Manual step — DONE
 
-The pipeline is fully automated except one step that **cannot** be automated
-(WVS issues a personalized download link after a license form):
-
-1. Follow `publishing/docs/wvs_download.md` — register (free) at
-   `worldvaluessurvey.org`, download **`WVS TimeSeries 1981 2022 Csv v5 0.zip`**.
-2. Unzip, place the CSV in `publishing/data/raw/`.
-3. Then just tell the assistant: *"file is at data/raw/<filename>"*.
-
-Everything after that (verify, adapt if needed, build full HAPC, re-test,
-update docs, sync, commit, push) is automated.
+The one manual download (WVS registration) is complete: the official
+1981–2022 CSV is at `data/raw/`. No further manual data steps remain.
 
 ## 4. Key facts & decisions (context you must know)
 
-- **Current raw data is Wave-7 ONLY** (subset of 97,220 rows, 66 countries,
-  2017–2023). App crashes no: period effects are unidentifiable on one wave.
-- **`X003R` in the subset is an age-bracket (1–6), NOT birth year**; in the
-  official file `X003R` IS the birth year. `preprocess.py` now resolves both.
+- **Current raw data is the official multi-wave WVS 1981–2022** (443,488 rows,
+  7 waves, 108 countries, 1981–2023) at `data/raw/WVS_Time_Series_...csv`.
+  Genuine period variation → full HAPC possible. (Legacy Wave-7-only subset
+  still supported via `clean(..., schema="subset")`.)
+- **`X003R`/`X003R2` are age-bracket recodes (1–6), NOT birth year, in BOTH
+  the subset and the official file.** The true birth year is `X002` (official
+  file); age is `X003`. `preprocess.py` reads `X002` and falls back to
+  `period − age` when absent.
 - **Cohort bins default to 5-year** (APC standard); sensitivity at 10/20.
-- **HAPC method default = Yang–Land cross-classified random effects** (period &
-  cohort random intercepts; age fixed polynomial). Implementation in
-  `src/apc_model.py` (skeleton).
+- **HAPC implementation = cross-classified period × cohort CELL model**
+  (age fixed polynomial; random intercept on the period × cohort cell),
+  fitted with statsmodels MixedLM. See `src/apc_model.py` + `reports/RESULTS.md`.
 - **GitHub identity in `publishing/` only:** name `Pratik Hagawane`, email
   `87967129+imagimaniac@users.noreply.github.com`. Global git untouched.
 - **gh auth = `imagimaniac`** (scopes include repo/projects). Remote is SSH.
@@ -62,8 +59,9 @@ update docs, sync, commit, push) is automated.
   git-ignored and never pushed. Citation in `docs/data_notes.md`.
 - **Profile / repo hygiene done:** 4 forks archived, 3 repos made private,
   1 project made private. Pinning flagships is a **manual GitHub UI step**.
-- **Open decision for the user (not urgent):** default analysis outcome =
-  generalized trust (WVS Q57); veto if wanted.
+- **Default analysis outcome = generalized trust (A165)** — used in the first
+  HAPC run; `selfexpr` (SurvSAgg) as robustness. Non-urgent open question:
+  should I build the individualism–collectivism battery from scratch next?
 
 ## 5. Commands / environment
 
@@ -81,9 +79,12 @@ Branch: `main`, remote: `origin` = `git@github.com:imagimaniac/generational-valu
 
 ## 6. Next steps (for the next session)
 
-1. If the WVS file is present → run the swap-in/verify task (plan: Phase 1b).
-2. If not → prep anything non-blocked; remind user of the one manual step.
-3. Medium-term: outcome index, full HAPC, dashboard, write-up (plan Phases 2–4).
+1. Refine the model: generalized (logistic) mixed model for binary trust,
+   apply survey weights (`S017`), run the analysis for the 5 contrast
+   countries (India/US/Sweden/Japan/Brazil).
+2. Build the interactive Streamlit dashboard on the real HAPC results
+   (`src/dashboard.py` is a skeleton).
+3. Deeper write-up + more outcomes (individualism-collectivism battery).
 
 *Sister docs: `publishing/generational-values-project-plan.md` (tasks),
 `publishing/master-plan-publication-outreach-roadmap.md` (long-term).*

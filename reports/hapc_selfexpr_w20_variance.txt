@@ -1,0 +1,1 @@
+period_x_cohort cell variance component: 0.133827
